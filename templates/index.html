@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fresher Job Matcher - Bangalore</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🚀 Fresher Job Matcher</h1>
+            <p>Find your perfect job match in Bangalore</p>
+        </header>
+
+        <main class="main-content">
+            <!-- Form Section -->
+            <section class="form-section">
+                <form id="matcherForm" class="form">
+                    <div class="form-group">
+                        <label for="username">👤 Your Name</label>
+                        <input 
+                            type="text" 
+                            id="username" 
+                            name="username" 
+                            placeholder="Enter your full name"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="resume">📄 Your Resume</label>
+                        <textarea 
+                            id="resume" 
+                            name="resume" 
+                            placeholder="Paste your resume content here (skills, projects, experience)..."
+                            rows="8"
+                            required
+                        ></textarea>
+                        <small>Min 50 characters required</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="domain">💼 Preferred Domain</label>
+                        <select id="domain" name="domain" required>
+                            <option value="">-- Select Domain --</option>
+                            <option value="Python">Python Developer</option>
+                            <option value="AI">AI/ML Engineer</option>
+                            <option value="GenAI">GenAI Engineer</option>
+                            <option value="Backend">Backend Developer</option>
+                            <option value="FullStack">Full Stack Developer</option>
+                            <option value="Automation">Automation Engineer</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="location">📍 Location</label>
+                        <input 
+                            type="text" 
+                            id="location" 
+                            name="location" 
+                            value="Bangalore"
+                            disabled
+                        >
+                        <small>Pre-set to Bangalore</small>
+                    </div>
+
+                    <button type="submit" class="btn-submit">Find Matching Jobs</button>
+                </form>
+            </section>
+
+            <!-- Results Section -->
+            <section id="resultsSection" class="results-section" style="display: none;">
+                <div class="results-header">
+                    <h2>📊 Your Match Results</h2>
+                    <button class="btn-back" onclick="resetForm()">← Back to Form</button>
+                </div>
+
+                <!-- Resume Analysis -->
+                <div id="resumeAnalysis" class="analysis-card">
+                    <h3>Your Resume Analysis</h3>
+                    <div id="analysisContent"></div>
+                </div>
+
+                <!-- Matched Jobs -->
+                <div id="jobsResults" class="jobs-grid">
+                    <h3>Matching Job Opportunities</h3>
+                    <div id="jobsList"></div>
+                </div>
+            </section>
+
+            <!-- Loading Spinner -->
+            <div id="loadingSpinner" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>Matching your profile with jobs...</p>
+            </div>
+
+            <!-- Error Message -->
+            <div id="errorMessage" class="error-message" style="display: none;"></div>
+        </main>
+
+        <footer class="footer">
+            <p>© 2026 Fresher Job Matcher | Powered by AI</p>
+        </footer>
+    </div>
+
+    <script>
+        const form = document.getElementById('matcherForm');
+        const resultsSection = document.getElementById('resultsSection');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const errorMessage = document.getElementById('errorMessage');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Get form data
+            const username = document.getElementById('username').value.trim();
+            const resume = document.getElementById('resume').value.trim();
+            const domain = document.getElementById('domain').value;
+            const location = document.getElementById('location').value;
+
+            // Validation
+            if (!username || !resume || !domain) {
+                showError('Please fill all fields');
+                return;
+            }
+
+            if (resume.length < 50) {
+                showError('Resume must be at least 50 characters');
+                return;
+            }
+
+            // Hide previous results and show loading
+            resultsSection.style.display = 'none';
+            errorMessage.style.display = 'none';
+            loadingSpinner.style.display = 'flex';
+
+            try {
+                // Send request
+                const formData = new FormData();
+                formData.append('username', username);
+                formData.append('resume', resume);
+                formData.append('domain', domain);
+
+                const response = await fetch('/api/match-jobs', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to match jobs');
+                }
+
+                const data = await response.json();
+                displayResults(data);
+
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                loadingSpinner.style.display = 'none';
+            }
+        });
+
+        function displayResults(data) {
+            // Resume Analysis
+            const analysisHTML = `
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <span class="label">ATS Score</span>
+                        <span class="value">${data.resume_analysis.ats_score}/100</span>
+                    </div>
+                    <div class="analysis-item">
+                        <span class="label">Skills Found</span>
+                        <span class="value">${data.resume_analysis.skills_found.length}</span>
+                    </div>
+                    <div class="analysis-item">
+                        <span class="label">Projects</span>
+                        <span class="value">${data.resume_analysis.projects_count}</span>
+                    </div>
+                    <div class="analysis-item">
+                        <span class="label">Experience</span>
+                        <span class="value">${data.resume_analysis.experience_years} yrs</span>
+                    </div>
+                </div>
+                <div class="skills-section">
+                    <h4>Skills Detected:</h4>
+                    <div class="skill-tags">
+                        ${data.resume_analysis.skills_found.map(skill => 
+                            `<span class="skill-tag">${skill}</span>`
+                        ).join('')}
+                    </div>
+                </div>
+            `;
+            document.getElementById('analysisContent').innerHTML = analysisHTML;
+
+            // Jobs Results
+            const jobsHTML = data.matched_jobs.length > 0 ? 
+                data.matched_jobs.map(job => `
+                    <div class="job-card">
+                        <div class="job-header">
+                            <h4>${job.company}</h4>
+                            <span class="match-badge">${job.match_percentage}% Match</span>
+                        </div>
+                        <div class="job-role">💼 ${job.role}</div>
+                        <div class="job-details">
+                            <span class="detail">📍 ${job.location}</span>
+                            <span class="detail">💰 ${job.salary_range}</span>
+                            <span class="detail">👥 ${job.experience_required}</span>
+                        </div>
+                        <p class="job-description">${job.description}</p>
+                        <div class="skills-section">
+                            <h5>Required Skills:</h5>
+                            <div class="skill-tags">
+                                ${job.skills_required.map(skill => 
+                                    `<span class="skill-tag">${skill}</span>`
+                                ).join('')}
+                            </div>
+                        </div>
+                        ${job.missing_skills.length > 0 ? `
+                            <div class="missing-skills">
+                                <h5>Missing Skills (Nice to have):</h5>
+                                <div class="skill-tags warning">
+                                    ${job.missing_skills.map(skill => 
+                                        `<span class="skill-tag warning">${skill}</span>`
+                                    ).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                        <a href="${job.application_url}" target="_blank" class="btn-apply">Apply Now →</a>
+                    </div>
+                `).join('') :
+                '<p class="no-results">No matching jobs found. Try a different domain.</p>';
+
+            document.getElementById('jobsList').innerHTML = jobsHTML;
+
+            // Show results
+            resultsSection.style.display = 'block';
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            loadingSpinner.style.display = 'none';
+        }
+
+        function resetForm() {
+            form.reset();
+            resultsSection.style.display = 'none';
+            errorMessage.style.display = 'none';
+            form.scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
